@@ -1,0 +1,9 @@
+target/
+.mvn/
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+application-local.yml
