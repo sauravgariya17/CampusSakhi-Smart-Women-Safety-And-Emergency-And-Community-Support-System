@@ -1,5 +1,9 @@
 """Comprehensive automated backend test suite for the CampusSakhi FastAPI backend."""
 
+import os
+
+os.environ.setdefault("JWT_SECRET", "test-only-secret-with-at-least-32-characters")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -10,7 +14,8 @@ from app.core.config import settings
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
-from app.models.entities import NotificationLog, NotificationLogStatusEnum
+from app.models.entities import NotificationLog, NotificationLogStatusEnum, RoleEnum, User
+from app.core.security import hash_password
 from app.services.map_service import MapService
 
 # Ensure no real emails are ever sent during testing
@@ -40,13 +45,25 @@ app.dependency_overrides[get_db] = override_get_db
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_test_database():
-    """Create tables and seed default safe zones and demo accounts once for the test module."""
+    """Create tables and seed isolated test accounts once for this module."""
     settings.NOTIFICATION_EMAIL_ENABLED = False
     Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
     db = TestingSessionLocal()
     try:
         MapService.seed_defaults_if_empty(db)
+        for role in RoleEnum:
+            email = f"{role.value.lower()}@test.example.com"
+            db.add(User(
+                name=f"Test {role.value}",
+                email=email,
+                password_hash=hash_password("TestOnly@123"),
+                role=role.value,
+                anonymous_handle=f"test_{role.value.lower()}",
+                is_verified=True,
+                is_active=True,
+            ))
+        db.commit()
     finally:
         db.close()
     yield
@@ -63,7 +80,7 @@ def auth_headers(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-def login_demo_role(client: TestClient, email: str, password: str = "Safety@123") -> str:
+def login_demo_role(client: TestClient, email: str, password: str = "TestOnly@123") -> str:
     resp = client.post("/api/auth/login", json={"email": email, "password": password})
     assert resp.status_code == 200, resp.text
     return resp.json()["data"]["accessToken"]
@@ -252,7 +269,7 @@ def test_map_config_and_safe_zones(client: TestClient):
 # ============================================================================
 def test_emergency_sos_workflow(client: TestClient):
     user_token = login_demo_role(client, "riya.verma@gehu.ac.in", "StrongPass@123")
-    security_token = login_demo_role(client, "security@gehu.ac.in", "Safety@123")
+    security_token = login_demo_role(client, "security_staff@test.example.com")
 
     user_headers = auth_headers(user_token)
     sec_headers = auth_headers(security_token)
@@ -417,7 +434,7 @@ def test_safety_journeys_workflow(client: TestClient):
 # ============================================================================
 def test_incident_reporting_and_anonymity_boundaries(client: TestClient):
     user_token = login_demo_role(client, "riya.verma@gehu.ac.in", "StrongPass@123")
-    admin_token = login_demo_role(client, "admin@gehu.ac.in", "Safety@123")
+    admin_token = login_demo_role(client, "admin@test.example.com")
 
     user_headers = auth_headers(user_token)
     admin_headers = auth_headers(admin_token)
@@ -517,8 +534,8 @@ def test_incident_reporting_and_anonymity_boundaries(client: TestClient):
 # ============================================================================
 def test_community_and_moderation_workflow(client: TestClient):
     user_token = login_demo_role(client, "riya.verma@gehu.ac.in", "StrongPass@123")
-    student2_token = login_demo_role(client, "student@gehu.ac.in", "Safety@123")
-    mod_token = login_demo_role(client, "moderator@gehu.ac.in", "Safety@123")
+    student2_token = login_demo_role(client, "user@test.example.com")
+    mod_token = login_demo_role(client, "moderator@test.example.com")
 
     user_headers = auth_headers(user_token)
     student2_headers = auth_headers(student2_token)
@@ -659,7 +676,7 @@ def test_community_and_moderation_workflow(client: TestClient):
 # ============================================================================
 def test_analytics_dashboard_users_and_audit_logs(client: TestClient):
     user_token = login_demo_role(client, "riya.verma@gehu.ac.in", "StrongPass@123")
-    admin_token = login_demo_role(client, "admin@gehu.ac.in", "Safety@123")
+    admin_token = login_demo_role(client, "admin@test.example.com")
 
     user_headers = auth_headers(user_token)
     admin_headers = auth_headers(admin_token)
@@ -698,7 +715,7 @@ def test_analytics_dashboard_users_and_audit_logs(client: TestClient):
     users_resp = client.get("/api/admin/users", headers=admin_headers)
     assert users_resp.status_code == 200
     users_list = users_resp.json()["data"]["content"]
-    admin_user = next(u for u in users_list if u["email"] == "admin@gehu.ac.in")
+    admin_user = next(u for u in users_list if u["email"] == "admin@test.example.com")
     riya_user = next(u for u in users_list if u["email"] == "riya.verma@gehu.ac.in")
 
     # Admin cannot demote self -> 400

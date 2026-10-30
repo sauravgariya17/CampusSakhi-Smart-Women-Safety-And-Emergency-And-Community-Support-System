@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "CampusSakhi Safety Platform"
     API_V1_STR: str = "/api"
 
-    # Database: MySQL by default (configured via .env), or SQLite fallback
+    # SQLite is convenient for local development. Production should set a managed DB URL.
     DATABASE_URL: str = Field(
         default="sqlite:///./gehu_safety.db",
         description="Database connection URL"
@@ -18,8 +18,8 @@ class Settings(BaseSettings):
 
     # JWT Settings
     JWT_SECRET: str = Field(
-        default="CHANGE_THIS_TO_A_LONG_RANDOM_BASE64_SECRET_MIN_256_BITS_FOR_HS256",
-        description="HMAC SHA256 secret key for signing tokens"
+        min_length=32,
+        description="Unique random HMAC SHA256 secret key (at least 32 characters)"
     )
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15

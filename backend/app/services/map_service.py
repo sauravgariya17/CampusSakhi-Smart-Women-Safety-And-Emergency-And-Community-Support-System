@@ -2,8 +2,7 @@ from typing import List
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.security import hash_password
-from app.models.entities import CommunityPost, RoleEnum, SafeZone, User
+from app.models.entities import SafeZone, User
 from app.schemas.map import MapConfigResponse, SafeZoneResponse
 
 DEFAULT_SAFE_ZONES = [
@@ -38,6 +37,22 @@ DEFAULT_SAFE_ZONES = [
 ]
 
 class MapService:
+    LEGACY_DEMO_EMAILS = (
+        "student@gehu.ac.in",
+        "moderator@gehu.ac.in",
+        "security@gehu.ac.in",
+        "admin@gehu.ac.in",
+    )
+
+    @staticmethod
+    def disable_legacy_demo_accounts(db: Session) -> None:
+        """Disable accounts created by older releases with publicly known credentials."""
+        db.query(User).filter(
+            User.email.in_(MapService.LEGACY_DEMO_EMAILS),
+            User.is_active.is_(True),
+        ).update({User.is_active: False}, synchronize_session=False)
+        db.commit()
+
     @staticmethod
     def get_map_config() -> MapConfigResponse:
         return MapConfigResponse(
@@ -66,85 +81,4 @@ class MapService:
         if db.query(SafeZone).count() == 0:
             for z in DEFAULT_SAFE_ZONES:
                 db.add(SafeZone(**z))
-            db.commit()
-
-        # Ensure demo role accounts exist in both MySQL and SQLite fallback
-        demo_specs = [
-            {
-                "name": "Ananya Sharma",
-                "email": "student@gehu.ac.in",
-                "phone_encrypted": "+91-9876543210",
-                "role": RoleEnum.USER.value,
-                "anonymous_handle": "brave_sparrow_482",
-            },
-            {
-                "name": "Meera Rawat (Moderator)",
-                "email": "moderator@gehu.ac.in",
-                "phone_encrypted": "+91-9876543211",
-                "role": RoleEnum.MODERATOR.value,
-                "anonymous_handle": "calm_lotus_109",
-            },
-            {
-                "name": "Chief Security Officer Negi",
-                "email": "security@gehu.ac.in",
-                "phone_encrypted": "+91-9876543212",
-                "role": RoleEnum.SECURITY_STAFF.value,
-                "anonymous_handle": "steady_falcon_771",
-            },
-            {
-                "name": "Dr. Kavita Joshi (Admin)",
-                "email": "admin@gehu.ac.in",
-                "phone_encrypted": "+91-9876543213",
-                "role": RoleEnum.ADMIN.value,
-                "anonymous_handle": "wise_banyan_901",
-            },
-        ]
-
-        added_any = False
-        for spec in demo_specs:
-            existing = db.query(User).filter(User.email == spec["email"]).first()
-            if not existing:
-                handle = spec["anonymous_handle"]
-                if db.query(User).filter(User.anonymous_handle == handle).first():
-                    handle = f"{handle}_x"
-                db.add(
-                    User(
-                        name=spec["name"],
-                        email=spec["email"],
-                        password_hash=hash_password("Safety@123"),
-                        phone_encrypted=spec["phone_encrypted"],
-                        role=spec["role"],
-                        anonymous_handle=handle,
-                        is_verified=True,
-                        is_active=True,
-                    )
-                )
-                added_any = True
-        if added_any:
-            db.commit()
-
-        student = db.query(User).filter(User.email == "student@gehu.ac.in").first()
-        if student and db.query(CommunityPost).count() == 0:
-            db.add_all([
-                CommunityPost(
-                    author_user_id=student.id,
-                    anonymous_handle_snapshot=student.anonymous_handle,
-                    title="Streetlights restored along Back Gate Lane near CS Block",
-                    body="Just wanted to share that the maintenance team replaced the flickering streetlights between CS Block and Gate 2. Still recommend walking in pairs after 8 PM!",
-                    category="SAFETY_TIP",
-                    area_label="Gate 2 / CS Block Lane",
-                    moderation_status="PUBLISHED",
-                    upvote_count=5,
-                ),
-                CommunityPost(
-                    author_user_id=student.id,
-                    anonymous_handle_snapshot="calm_lotus_109",
-                    title="Evening shuttle timing reminder for Hostel residents",
-                    body="The campus security escort van departs from Central Library at 7:30 PM, 8:15 PM, and 9:00 PM daily for Girls Hostel Blocks A & B.",
-                    category="SUPPORT",
-                    area_label="Central Library",
-                    moderation_status="PUBLISHED",
-                    upvote_count=8,
-                ),
-            ])
             db.commit()

@@ -4,7 +4,7 @@ This directory contains the complete **Python FastAPI** backend for **CampusSakh
 
 ## Technology Stack
 - **Framework:** FastAPI + Uvicorn
-- **ORM & Database:** SQLAlchemy 2.0 (`mysql+pymysql` for MySQL `gehu_safety_db` with automatic SQLite fallback)
+- **ORM & Database:** SQLAlchemy 2.0 (SQLite locally; configure a managed database for production)
 - **Validation & Serialization:** Pydantic v2 + `pydantic-settings`
 - **Authentication & Security:** JWT (`PyJWT` HS256) + Bcrypt (`bcrypt`) + Role-Based Access Control (`USER`, `MODERATOR`, `SECURITY_STAFF`, `ADMIN`)
 - **Testing:** Pytest + FastAPI `TestClient` (`httpx`)
@@ -16,6 +16,14 @@ pip install -r requirements.txt
 cp .env.example .env
 uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
+
+Before starting, set `JWT_SECRET` in `.env` to a unique random value of at least 32 characters. Generate one with:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Production must set `DATABASE_URL`, `JWT_SECRET`, and `CORS_ORIGINS` through the hosting provider's secret/environment settings. The backend refuses to start if the database is unavailable; it does not fall back to SQLite. No demo accounts are created automatically. Provision privileged accounts through a controlled process. The test suite provisions its own accounts in an isolated in-memory database.
 
 ## Running Automated Tests
 

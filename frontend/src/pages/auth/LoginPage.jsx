@@ -8,17 +8,9 @@ import {
   EyeOff,
   ArrowRight,
   AlertCircle,
-  Sparkles,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
-
-const DEMO_ACCOUNTS = [
-  { label: "Student", email: "student@gehu.ac.in", pass: "Safety@123", role: "USER" },
-  { label: "Moderator", email: "moderator@gehu.ac.in", pass: "Safety@123", role: "MODERATOR" },
-  { label: "Security", email: "security@gehu.ac.in", pass: "Safety@123", role: "SECURITY_STAFF" },
-  { label: "Admin", email: "admin@gehu.ac.in", pass: "Safety@123", role: "ADMIN" },
-];
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -43,12 +35,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillDemo = (acc) => {
-    setEmail(acc.email);
-    setPassword(acc.pass);
-    setError("");
   };
 
   return (
@@ -144,25 +130,6 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign In"} <ArrowRight size={16} />
             </button>
           </form>
-
-          {/* Quick-fill Demo Role Selector for Testing */}
-          <div className="mt-6 pt-5 border-t border-slate-800">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-1.5">
-              <Sparkles size={12} className="text-violet-400" /> Quick-Fill Demo Roles (Testing)
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              {DEMO_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.role}
-                  type="button"
-                  onClick={() => fillDemo(acc)}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-violet-600/30 border border-slate-700 hover:border-violet-500/50 text-xs font-medium text-slate-200 transition-colors"
-                >
-                  {acc.label}
-                </button>
-              ))}
-            </div>
-          </div>
 
           <p className="text-xs text-slate-400 text-center mt-6">
             New to CampusSakhi?{" "}

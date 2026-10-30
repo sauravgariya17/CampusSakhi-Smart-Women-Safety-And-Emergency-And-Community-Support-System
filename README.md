@@ -49,7 +49,7 @@ A-Smart-Women-Safety-Emergency-Community-Support-System/
 │   │   │   └── security.py      # JWT HS256 auth, Bcrypt hashing, RBAC dependencies
 │   │   ├── db/
 │   │   │   ├── base.py          # SQLAlchemy DeclarativeBase
-│   │   │   └── session.py       # MySQL primary engine + automatic SQLite fallback
+│   │   │   └── session.py       # Configured SQLAlchemy database connection
 │   │   ├── models/
 │   │   │   └── entities.py      # 13 SQLAlchemy ORM models matching gehu_safety_db
 │   │   ├── schemas/             # Pydantic v2 request/response DTOs (camelCase aliases)
@@ -77,7 +77,7 @@ A-Smart-Women-Safety-Emergency-Community-Support-System/
 
 ### 1. Backend Setup (Python FastAPI)
 
-**Prerequisites:** Python 3.11+ (tested on Python 3.11 / 3.12). MySQL 8.0+ is supported out of the box (`gehu_safety_db`), with automatic fallback to local SQLite (`campussakhi.db`) if MySQL is not running.
+**Prerequisites:** Python 3.11+ (tested on Python 3.11 / 3.12). SQLite is used for local development; production should use a managed database configured with `DATABASE_URL`. The backend stops at startup if the configured database is unavailable.
 
 ```bash
 cd backend
@@ -94,13 +94,14 @@ pip install -r requirements.txt
 
 # Copy environment configuration and customize if needed
 cp .env.example .env
+# Set JWT_SECRET to a unique random value (see the comment in .env.example).
 
-# Start the FastAPI server on port 8080
+# Development only; production must omit --reload and use the host's process manager.
 uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 - **API Base URL:** `http://localhost:8080`
-- **Interactive Swagger UI:** `http://localhost:8080/docs`
+- **Interactive Swagger UI:** `http://localhost:8080/api/docs`
 - **Health Check:** `http://localhost:8080/api/health`
 
 ### 2. Frontend Setup (React + Vite)
@@ -124,16 +125,15 @@ npm run dev
 
 ---
 
-## Seeded Demo Accounts (Local Testing)
+## Production deployment settings
 
-When the database is initialized, four demo role accounts are automatically available (and can be filled with 1 click on the `/login` page):
-
-| Role | Email | Password | Capabilities |
-| :--- | :--- | :--- | :--- |
-| **Student (`USER`)** | `student@gehu.ac.in` | `Safety@123` | Emergency SOS, Trusted Contacts, Journey Mode, Incident Reporting, Anonymous Community |
-| **Moderator (`MODERATOR`)** | `moderator@gehu.ac.in` | `Safety@123` | All Student features + Community Moderation Queue (`/admin/moderation`) |
-| **Security (`SECURITY_STAFF`)** | `security@gehu.ac.in` | `Safety@123` | Live SOS Dispatch Console (`/admin/security`), Incident Review, Safety Analytics |
-| **Administrator (`ADMIN`)** | `admin@gehu.ac.in` | `Safety@123` | Full Governance Console (`/admin`), User Role/Status Management, Audit Logs |
+- Set `JWT_SECRET` to a unique random secret of at least 32 characters. The backend refuses to start without it.
+- Set `DATABASE_URL` to the production database. A failed connection stops startup; it never switches to a local database.
+- Set `CORS_ORIGINS` to the exact deployed frontend origin(s), comma-separated.
+- Set the frontend build variable `VITE_API_BASE_URL` to the deployed API base URL, including `/api`.
+- Configure SMTP and set `NOTIFICATION_EMAIL_ENABLED=true` only when live emergency email delivery is operational. The default is disabled.
+- Create administrator/moderator/security accounts through a controlled provisioning process. No demo or privileged accounts are created automatically.
+- If a previous version or database was used, remove or reset the published demo accounts and rotate any credentials or secrets that were exposed. Removing a file from the current Git tree does not erase it from earlier Git history.
 
 ---
 

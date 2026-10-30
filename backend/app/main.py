@@ -50,6 +50,7 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        MapService.disable_legacy_demo_accounts(db)
         MapService.seed_defaults_if_empty(db)
     except Exception as exc:
         logger.warning("Database seed check skipped: %s", exc)
@@ -76,7 +77,7 @@ register_exception_handlers(app)
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origin_list or ["*"],
+    allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -24,20 +24,20 @@ def create_db_engine():
     if db_url.startswith("sqlite"):
         connect_args["check_same_thread"] = False
 
+    engine = create_engine(
+        db_url,
+        connect_args=connect_args,
+        pool_pre_ping=True,
+    )
     try:
-        engine = create_engine(
-            db_url,
-            connect_args=connect_args,
-            pool_pre_ping=True,
-        )
-        with engine.connect() as conn:
+        with engine.connect():
             pass
-        logger.info("Connected to database successfully: %s", db_url.split("@")[-1] if "@" in db_url else db_url)
-        return engine
-    except Exception as exc:
-        logger.warning("Could not connect to configured database: %s. Falling back to SQLite database.", exc)
-        fallback_url = "sqlite:///./gehu_safety.db"
-        return create_engine(fallback_url, connect_args={"check_same_thread": False}, pool_pre_ping=True)
+    except Exception:
+        engine.dispose()
+        logger.exception("Could not connect to configured database; refusing to start")
+        raise
+    logger.info("Connected to configured database")
+    return engine
 
 engine = create_db_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
