@@ -26,6 +26,7 @@ from app.exceptions.handlers import register_exception_handlers
 from app.services.journey_service import JourneyService
 from app.services.map_service import MapService
 from app.services.sos_service import SosService
+from app.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,8 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         MapService.disable_legacy_demo_accounts(db)
+        if AuthService.bootstrap_admin(db):
+            logger.warning("Bootstrap administrator configured; remove BOOTSTRAP_ADMIN_* settings now")
         MapService.seed_defaults_if_empty(db)
     except Exception as exc:
         logger.warning("Database seed check skipped: %s", exc)

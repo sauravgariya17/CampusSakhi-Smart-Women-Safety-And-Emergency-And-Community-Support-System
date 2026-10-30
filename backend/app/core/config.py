@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
 
+    # Optional one-time administrator bootstrap. Remove these after first startup.
+    BOOTSTRAP_ADMIN_NAME: str | None = None
+    BOOTSTRAP_ADMIN_EMAIL: str | None = None
+    BOOTSTRAP_ADMIN_PASSWORD: str | None = Field(default=None, min_length=12)
+
     model_config = {
         "env_file": str(ENV_FILE_PATH) if ENV_FILE_PATH.exists() else ".env",
         "env_file_encoding": "utf-8",

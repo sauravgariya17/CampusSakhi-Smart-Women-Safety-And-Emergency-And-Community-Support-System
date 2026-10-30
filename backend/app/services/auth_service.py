@@ -20,6 +20,45 @@ from app.utils.handle_generator import generate_unique_handle
 
 class AuthService:
     @staticmethod
+    def bootstrap_admin(db: Session) -> bool:
+        values = (
+            settings.BOOTSTRAP_ADMIN_NAME,
+            settings.BOOTSTRAP_ADMIN_EMAIL,
+            settings.BOOTSTRAP_ADMIN_PASSWORD,
+        )
+        if not any(values):
+            return False
+        if not all(values):
+            raise RuntimeError(
+                "Set BOOTSTRAP_ADMIN_NAME, BOOTSTRAP_ADMIN_EMAIL, and "
+                "BOOTSTRAP_ADMIN_PASSWORD together, or leave all three unset"
+            )
+
+        name, email, password = values
+        email = email.lower().strip()
+        user = db.query(User).filter(User.email == email).first()
+        if user is None:
+            user = User(
+                name=name.strip(),
+                email=email,
+                password_hash=hash_password(password),
+                anonymous_handle=generate_unique_handle(db),
+                role=RoleEnum.ADMIN.value,
+                is_verified=True,
+                is_active=True,
+            )
+            db.add(user)
+        else:
+            user.name = name.strip()
+            user.password_hash = hash_password(password)
+            user.role = RoleEnum.ADMIN.value
+            user.is_verified = True
+            user.is_active = True
+
+        db.commit()
+        return True
+
+    @staticmethod
     def to_user_response(user: User) -> UserResponse:
         return UserResponse(
             id=user.id,

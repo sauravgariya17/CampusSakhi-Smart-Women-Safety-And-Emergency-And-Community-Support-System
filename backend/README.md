@@ -25,6 +25,8 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 Production must set `DATABASE_URL`, `JWT_SECRET`, and `CORS_ORIGINS` through the hosting provider's secret/environment settings. The backend refuses to start if the database is unavailable; it does not fall back to SQLite. No demo accounts are created automatically. Provision privileged accounts through a controlled process. The test suite provisions its own accounts in an isolated in-memory database.
 
+To create the first administrator, temporarily set `BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_EMAIL`, and `BOOTSTRAP_ADMIN_PASSWORD` together in the backend environment (password must be at least 12 characters). Start the backend once, then remove all three variables from the hosting settings and restart. The bootstrap sets that account's role to `ADMIN` and uses the supplied password; do not leave these settings configured.
+
 ## Running Automated Tests
 
 ```bash
