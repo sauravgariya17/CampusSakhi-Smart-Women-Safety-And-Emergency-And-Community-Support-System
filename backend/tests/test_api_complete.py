@@ -1,6 +1,7 @@
 """Comprehensive automated backend test suite for the CampusSakhi FastAPI backend."""
 
 import os
+from contextlib import asynccontextmanager
 
 os.environ.setdefault("JWT_SECRET", "test-only-secret-with-at-least-32-characters")
 
@@ -14,7 +15,7 @@ from app.core.config import settings
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
-from app.models.entities import NotificationLog, NotificationLogStatusEnum, RoleEnum, User
+from app.models.entities import CommunityPost, NotificationLog, NotificationLogStatusEnum, RoleEnum, User
 from app.core.security import hash_password
 from app.services.map_service import MapService
 
@@ -43,6 +44,15 @@ def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 
 
+@asynccontextmanager
+async def isolated_test_lifespan(_app):
+    """Prevent tests from initializing or mutating the configured application database."""
+    yield
+
+
+app.router.lifespan_context = isolated_test_lifespan
+
+
 @pytest.fixture(scope="module", autouse=True)
 def setup_test_database():
     """Create tables and seed isolated test accounts once for this module."""
@@ -63,6 +73,29 @@ def setup_test_database():
                 is_verified=True,
                 is_active=True,
             ))
+        db.commit()
+
+        test_user = db.query(User).filter(User.email == "user@test.example.com").one()
+        db.add_all([
+            CommunityPost(
+                author_user_id=test_user.id,
+                anonymous_handle_snapshot=test_user.anonymous_handle,
+                title="Test safety update",
+                body="A test-only community post for dashboard counts.",
+                category="SAFETY_TIP",
+                area_label="Test Area",
+                moderation_status="PUBLISHED",
+            ),
+            CommunityPost(
+                author_user_id=test_user.id,
+                anonymous_handle_snapshot=test_user.anonymous_handle,
+                title="Test support note",
+                body="A second test-only community post for dashboard counts.",
+                category="SUPPORT",
+                area_label="Test Area",
+                moderation_status="PUBLISHED",
+            ),
+        ])
         db.commit()
     finally:
         db.close()
