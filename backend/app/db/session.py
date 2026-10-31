@@ -7,16 +7,21 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 def _normalize_db_url(db_url: str) -> str:
-    """Safely encode raw '@' inside database password if multiple '@' exist in URL."""
+    """Normalize common hosting URLs for the database drivers installed by this app."""
     if "://" not in db_url:
         return db_url
     scheme, rest = db_url.split("://", 1)
+    scheme = {
+        "postgres": "postgresql+psycopg",
+        "postgresql": "postgresql+psycopg",
+        "postgresql+psycopg2": "postgresql+psycopg",
+    }.get(scheme, scheme)
     if rest.count("@") > 1:
         userinfo, hostpart = rest.rsplit("@", 1)
         if ":" in userinfo:
             user, raw_pass = userinfo.split(":", 1)
-            return f"{scheme}://{user}:{quote_plus(raw_pass)}@{hostpart}"
-    return db_url
+            rest = f"{user}:{quote_plus(raw_pass)}@{hostpart}"
+    return f"{scheme}://{rest}"
 
 def create_db_engine():
     db_url = _normalize_db_url(settings.DATABASE_URL)

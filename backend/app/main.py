@@ -51,12 +51,20 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        MapService.disable_legacy_demo_accounts(db)
+        try:
+            MapService.disable_legacy_demo_accounts(db)
+        except Exception:
+            logger.exception("Could not disable legacy demo accounts")
+
+        # A configured admin bootstrap must either succeed or stop startup. Silently
+        # skipping this leaves deployments with no usable administrator.
         if AuthService.bootstrap_admin(db):
             logger.warning("Bootstrap administrator configured; remove BOOTSTRAP_ADMIN_* settings now")
-        MapService.seed_defaults_if_empty(db)
-    except Exception as exc:
-        logger.warning("Database seed check skipped: %s", exc)
+
+        try:
+            MapService.seed_defaults_if_empty(db)
+        except Exception:
+            logger.exception("Database safe-zone seeding skipped")
     finally:
         db.close()
 

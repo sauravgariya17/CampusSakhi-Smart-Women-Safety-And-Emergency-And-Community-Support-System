@@ -4,6 +4,7 @@ import os
 from contextlib import asynccontextmanager
 
 os.environ.setdefault("JWT_SECRET", "test-only-secret-with-at-least-32-characters")
+os.environ["DATABASE_URL"] = "sqlite://"
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,7 +14,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
 from app.db.base import Base
-from app.db.session import get_db
+from app.db.session import _normalize_db_url, get_db
 from app.main import app
 from app.models.entities import CommunityPost, NotificationLog, NotificationLogStatusEnum, RoleEnum, User
 from app.core.security import hash_password
@@ -51,6 +52,15 @@ async def isolated_test_lifespan(_app):
 
 
 app.router.lifespan_context = isolated_test_lifespan
+
+
+@pytest.mark.parametrize("url", [
+    "postgres://user:pass@db.example.test:5432/campus",
+    "postgresql://user:pass@db.example.test:5432/campus",
+    "postgresql+psycopg2://user:pass@db.example.test:5432/campus",
+])
+def test_postgres_urls_use_installed_psycopg_driver(url: str):
+    assert _normalize_db_url(url) == url.replace(url.split("://", 1)[0], "postgresql+psycopg", 1)
 
 
 @pytest.fixture(scope="module", autouse=True)
