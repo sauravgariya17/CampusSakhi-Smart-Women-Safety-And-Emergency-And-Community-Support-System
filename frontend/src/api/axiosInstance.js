@@ -1,7 +1,14 @@
 import axios from "axios";
 
+const configuredApiBaseUrl = (
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api"
+).replace(/\/+$/, "");
+const apiBaseUrl = configuredApiBaseUrl.endsWith("/api")
+  ? configuredApiBaseUrl
+  : `${configuredApiBaseUrl}/api`;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api",
+  baseURL: apiBaseUrl,
 });
 
 // Attach the JWT access token to every request.

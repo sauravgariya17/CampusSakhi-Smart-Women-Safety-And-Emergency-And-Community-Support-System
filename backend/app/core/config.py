@@ -26,7 +26,10 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # CORS
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
+    CORS_ORIGINS: str = (
+        "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,"
+        "https://campus-sakhi-smart-women-safety-and.vercel.app"
+    )
 
     @property
     def cors_origin_list(self) -> List[str]:
